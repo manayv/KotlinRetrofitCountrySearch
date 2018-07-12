@@ -20,27 +20,35 @@ class MainActivity : AppCompatActivity() {
 
         btn_search.setOnClickListener {
             if (edit_search.text.toString().isNotEmpty())
-                beginSearch(edit_search.text.toString())
+                beginSearch(edit_search.text.toString().trim().toUpperCase())
         }
     }
 
 
     @SuppressLint("SetTextI18n")
     private fun beginSearch(searchString: String) {
-        disposable = CountryApiService.create().getForIso2Code(searchString.trim().toUpperCase())
+        txt_search_result.text = ""
+
+        disposable = CountryApiService.create().getForIso2Code(searchString)
                 .subscribeOn(Schedulers.io())
-                .map { res -> res.restResponse?.country }
+                // Only the leave struct in the JSON tree (JSON key "result") is interesting
+                .map { responseRoot -> responseRoot.restResponse?.country }
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
+                        /* onSuccess lambda */
                         { country ->
                             if (country != null)
                                 txt_search_result.text = "Country ${country.name} / " +
                                         "${country.isoCode2} / " +
                                         "${country.isoCode3} "
+                            else
+                                txt_search_result.text = "No Country not found for ISO code"
                         },
+                        /* onError lambda */
                         { Toast.makeText(this, it.message, Toast.LENGTH_LONG).show() }
                 )
     }
+
 
     override fun onPause() {
         super.onPause()
